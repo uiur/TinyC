@@ -10,6 +10,9 @@
 %token OP_EQUAL OP_NOT_EQUAL
 %token OP_PLUS OP_MINUS
 %token OP_TIMES OP_DIVIDE
+
+%left OP_PLUS OP_MINUS
+%left OP_TIMES OP_DIVIDE
 %%
 program:
     external_declaration
