@@ -1,14 +1,18 @@
 YACC=bison
 YFLAGS= -d
+CC=clang
 LEX=flex
 LFLAGS=
-FILES= tinc.tab.c lex.yy.c
+FILES= expression.cc tinc.cc lex.yy.cc 
 all: parser
 parser: $(FILES)
-	gcc -o parser $(FILES)
+	g++ -o parser $(FILES)
 
-lex.yy.c: tinc.l tinc.tab.h
-	$(LEX) $(LFLAGS) tinc.l
+lex.yy.o: lex.yy.cc
+	$(CC) -c lex.yy.cc -o lex.yy.o
 
-tinc.tab.c: tinc.y
-	$(YACC) $(YFLAGS) tinc.y
+lex.yy.cc: tinc.l tinc.hh
+	$(LEX) $(LFLAGS) -o lex.yy.cc tinc.l
+
+tinc.cc: tinc.y
+	$(YACC) $(YFLAGS) tinc.y -o tinc.cc

@@ -19,6 +19,10 @@
 
 *.tab.c
 *.tab.h
+lex.yy.cc
 lex.yy.c
+
+*.hh
+tinc.cc
 
 parser
