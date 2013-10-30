@@ -8,3 +8,7 @@ int foo (int a, int x) {
         d = -1;
     }
 }
+
+int main (int a, int b) {
+    foo(a, 1);
+}

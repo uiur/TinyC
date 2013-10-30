@@ -3,7 +3,7 @@ YFLAGS= -d
 CC=clang
 LEX=flex
 LFLAGS=
-FILES= expression.cc tinc.cc lex.yy.cc 
+FILES= expression.cc parser.cc tinc.cc lex.yy.cc 
 all: parser
 parser: $(FILES)
 	g++ -o parser $(FILES)

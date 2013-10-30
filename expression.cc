@@ -71,7 +71,7 @@ NodeMonoArithmeticOperation::~NodeMonoArithmeticOperation() {
 }
 
 void NodeMonoArithmeticOperation::print(ostream &os) {
-    os << '(' << op_ << ' '; 
+    os << '(' << op_ << ' ';
         node_->print(os);
         os << ')';
 }
@@ -87,7 +87,7 @@ NodeAssign::~NodeAssign() {
 }
 
 void NodeAssign::print(ostream &os) {
-    os << "(ASSIGN "; 
+    os << "(ASSIGN ";
     ident_->print(os);
     os << ' ';
     assign_value_->print(os);
@@ -186,8 +186,8 @@ NodeReturn::~NodeReturn() {
 
 void NodeReturn::print(ostream &os) {
     os << "(RETURN ";
-        value_->print(os);
-        os << ")";
+    value_->print(os);
+    os << ")";
 }
 
 NodeWhileBlock::NodeWhileBlock(Node *condition, Node *statement) {
@@ -205,5 +205,23 @@ void NodeWhileBlock::print(ostream &os) {
     condition_->print(os);
     os << " ";
     statement_->print(os);
+    os << ")";
+}
+
+NodeCallFunction::NodeCallFunction(Node *ident, Node *argument) {
+    ident_ = ident;
+    argument_ = argument;
+}
+
+NodeCallFunction::~NodeCallFunction() {
+    delete ident_;
+    delete argument_;
+}
+
+void NodeCallFunction::print(ostream &os) {
+    os << "(";
+    ident_->print(os);
+    os << " ";
+    argument_->print(os);
     os << ")";
 }

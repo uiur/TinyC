@@ -11,11 +11,14 @@ public:
 };
 
 class NodeIdent : public Node {
-    string ident_;
 public:
     explicit NodeIdent(string ident);
     virtual ~NodeIdent();
     void print(ostream &os);
+
+    string ident_;
+    int level_;
+    int offset_;
 };
 
 class NodeInteger : public Node {
@@ -117,6 +120,16 @@ class NodeWhileBlock : public Node {
 public:
     explicit NodeWhileBlock(Node *condition, Node *statement);
     ~NodeWhileBlock();
+
+    void print(ostream &os);
+};
+
+class NodeCallFunction : public Node {
+    Node *ident_;
+    Node *argument_;
+public:
+    NodeCallFunction(Node *ident, Node *argument);
+    ~NodeCallFunction();
 
     void print(ostream &os);
 };

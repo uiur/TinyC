@@ -5,6 +5,7 @@
 #include <string>
 #include <cstdio>
 #include "expression.h"
+#include "parser.h"
 using namespace std;
 
 %}
@@ -20,7 +21,7 @@ using namespace std;
 
 %token <int_value> INTEGER 
 %token <str_value> IDENTIFIER
-%token LEFT_PAR RIGHT_PAR LEFT_BRACE RIGHT_BRACE SEMICOLON
+%token <int_value> LEFT_PAR RIGHT_PAR LEFT_BRACE RIGHT_BRACE SEMICOLON
 %token OP_ASSIGN COMMA
 %token TYPE_INT
 %token IF ELSE RETURN WHILE
@@ -35,14 +36,17 @@ using namespace std;
 %left OP_PLUS OP_MINUS
 %left OP_TIMES OP_DIVIDE
 
-%type <node> add_expr mult_expr primary_expr relational_expr constant identifier expression equality_expr unary_expr assign_expr logical_or_expr logical_and_expr program main declaration external_declaration declarator_list declarator function_definition parameter_type_list  parameter_declaration statement compound_statement declaration_list statement_list if_statement while_statement
+%type <node> add_expr mult_expr primary_expr relational_expr constant identifier expression equality_expr unary_expr assign_expr logical_or_expr logical_and_expr program main declaration external_declaration declarator_list declarator function_definition parameter_type_list  parameter_declaration statement compound_statement declaration_list statement_list if_statement while_statement function_declarator variable_declarator parameter_declarator postfix_expr variable_reference function_reference argument_expression_list
 
 %{
 #include "tinc.hh"
+
 #define YY_DECL \
     yy::Parser::token_type yylex(yy::Parser::semantic_type *yylval)
 
 YY_DECL;
+
+tinc::Parser parser;
 %}
 
 %%
@@ -68,8 +72,8 @@ declaration:
     }
     ;
 declarator_list:
-    declarator
-    | declarator_list COMMA declarator {
+    variable_declarator
+    | declarator_list COMMA variable_declarator {
         $$ = new NodeList($1, $3);
     }
     ;
@@ -78,11 +82,24 @@ declarator:
     ;
 
 function_definition:
-    TYPE_INT declarator LEFT_PAR RIGHT_PAR compound_statement {
-        $$ = new NodeFunction($2, NULL, $5);
+    TYPE_INT function_declarator LEFT_PAR push_scope RIGHT_PAR compound_statement pop_scope {
+        $$ = new NodeFunction($2, NULL, $6);
     }
-    | TYPE_INT declarator LEFT_PAR parameter_type_list RIGHT_PAR compound_statement {
-        $$ = new NodeFunction($2, $4, $6);
+    | TYPE_INT function_declarator LEFT_PAR push_scope parameter_type_list RIGHT_PAR compound_statement pop_scope {
+        $$ = new NodeFunction($2, $5, $7);
+    }
+    ;
+function_declarator:
+    declarator {
+        NodeIdent *node_ident = (NodeIdent *)$1;
+
+        if (!parser.find_and_check_identifier_of_function_declaration(node_ident->ident_)) {
+            exit(1);
+        }
+
+        parser.register_identifier(node_ident->ident_, tinc::Identifier::FUNCTION);
+
+        $$ = $1;
     }
     ;
 parameter_type_list:
@@ -92,8 +109,34 @@ parameter_type_list:
     }
     ;
 parameter_declaration:
-    TYPE_INT declarator {
+    TYPE_INT parameter_declarator {
         $$ = new NodeDefineVariable($2);
+    }
+    ;
+parameter_declarator:
+    declarator {
+        NodeIdent *node_ident = (NodeIdent *)$1;
+
+        if (!parser.find_and_check_identifier_of_variable_declaration(node_ident->ident_)) {
+            exit(1);
+        }
+
+        parser.register_identifier(node_ident->ident_, tinc::Identifier::PARAMETER);
+
+        $$ = $1;
+    }
+    ;
+variable_declarator:
+    declarator {
+        NodeIdent *node_ident = (NodeIdent *)$1;
+
+        if (!parser.find_and_check_identifier_of_variable_declaration(node_ident->ident_)) {
+            exit(1);
+        }
+
+        parser.register_identifier(node_ident->ident_, tinc::Identifier::VARIABLE);
+
+        $$ = $1;
     }
     ;
 
@@ -127,17 +170,29 @@ while_statement:
 
 
 compound_statement:
-    LEFT_BRACE RIGHT_BRACE {
+    LEFT_BRACE push_scope pop_scope RIGHT_BRACE {
         $$ = NULL;
     }
-    | LEFT_BRACE statement_list RIGHT_BRACE {
-        $$ = $2;
+    | LEFT_BRACE push_scope statement_list pop_scope RIGHT_BRACE {
+        $$ = $3;
     }
-    | LEFT_BRACE declaration_list RIGHT_BRACE {
-        $$ = $2;
+    | LEFT_BRACE push_scope declaration_list pop_scope RIGHT_BRACE {
+        $$ = $3;
     }
-    | LEFT_BRACE declaration_list statement_list RIGHT_BRACE {
-        $$ = new NodeList($2, $3);
+    | LEFT_BRACE push_scope
+          declaration_list statement_list
+      pop_scope RIGHT_BRACE {
+        $$ = new NodeList($3, $4);
+    }
+    ;
+push_scope:
+    {
+        parser.push_scope();
+    }
+    ;
+pop_scope:
+    {
+        parser.pop_scope();
     }
     ;
 declaration_list:
@@ -232,13 +287,55 @@ unary_expr:
 
 postfix_expr:
     primary_expr
+    | function_reference
     ;
 
 primary_expr:
-    identifier
+    variable_reference
     | constant
     | LEFT_PAR expression RIGHT_PAR {
         $$ = $2;
+    }
+    ;
+
+variable_reference:
+    identifier {
+        NodeIdent *node_ident = (NodeIdent *)$1;
+
+        if (!parser.find_and_check_identifier_of_variable_reference(node_ident->ident_)) {
+            exit(1);
+        }
+
+        $$ = $1;
+    }
+    ;
+
+function_reference:
+    identifier LEFT_PAR RIGHT_PAR {
+        NodeIdent *node_ident = (NodeIdent *)$1;
+
+        if (!parser.find_and_check_identifier_of_function_reference(node_ident->ident_)) {
+            exit(1);
+        }
+
+        $$ = new NodeCallFunction($1, NULL);
+    }
+    | identifier LEFT_PAR argument_expression_list RIGHT_PAR {
+        NodeIdent *node_ident = (NodeIdent *)$1;
+
+        if (!parser.find_and_check_identifier_of_function_reference(node_ident->ident_)) {
+            exit(1);
+        }
+
+        $$ = new NodeCallFunction($1, $3);
+    }
+    ;
+
+
+argument_expression_list:
+    assign_expr
+    | argument_expression_list COMMA assign_expr {
+        $$ = new NodeList($1, $3);
     }
     ;
 
@@ -264,7 +361,7 @@ void yy::Parser::error(const location_type& loc, const string& msg) {
 
 int main(void) {
     yy::Parser p;
+    p.parse();
 
-    p.parse();    
     return 0;
 }
