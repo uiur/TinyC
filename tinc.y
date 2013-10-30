@@ -46,13 +46,18 @@ using namespace std;
 
 YY_DECL;
 
-tinc::Parser parser;
+extern int yylineno;
+
+tinc::Parser parser(&yylineno);
 %}
 
 %%
 main:
     program {
-        $1->print(cout);
+        if (parser.is_no_error()) {
+            $1->print(cout);
+        }
+
         $$ = $1;
     }
     ;
@@ -93,9 +98,7 @@ function_declarator:
     declarator {
         NodeIdent *node_ident = (NodeIdent *)$1;
 
-        if (!parser.find_and_check_identifier_of_function_declaration(node_ident->ident_)) {
-            exit(1);
-        }
+        parser.find_and_check_identifier_of_function_declaration(node_ident->ident_);
 
         parser.register_identifier(node_ident->ident_, tinc::Identifier::FUNCTION);
 
@@ -117,9 +120,7 @@ parameter_declarator:
     declarator {
         NodeIdent *node_ident = (NodeIdent *)$1;
 
-        if (!parser.find_and_check_identifier_of_variable_declaration(node_ident->ident_)) {
-            exit(1);
-        }
+        parser.find_and_check_identifier_of_variable_declaration(node_ident->ident_);
 
         parser.register_identifier(node_ident->ident_, tinc::Identifier::PARAMETER);
 
@@ -130,9 +131,7 @@ variable_declarator:
     declarator {
         NodeIdent *node_ident = (NodeIdent *)$1;
 
-        if (!parser.find_and_check_identifier_of_variable_declaration(node_ident->ident_)) {
-            exit(1);
-        }
+        parser.find_and_check_identifier_of_variable_declaration(node_ident->ident_);
 
         parser.register_identifier(node_ident->ident_, tinc::Identifier::VARIABLE);
 
@@ -302,9 +301,7 @@ variable_reference:
     identifier {
         NodeIdent *node_ident = (NodeIdent *)$1;
 
-        if (!parser.find_and_check_identifier_of_variable_reference(node_ident->ident_)) {
-            exit(1);
-        }
+        parser.find_and_check_identifier_of_variable_reference(node_ident->ident_);
 
         $$ = $1;
     }
@@ -314,18 +311,14 @@ function_reference:
     identifier LEFT_PAR RIGHT_PAR {
         NodeIdent *node_ident = (NodeIdent *)$1;
 
-        if (!parser.find_and_check_identifier_of_function_reference(node_ident->ident_)) {
-            exit(1);
-        }
+        parser.find_and_check_identifier_of_function_reference(node_ident->ident_);
 
         $$ = new NodeCallFunction($1, NULL);
     }
     | identifier LEFT_PAR argument_expression_list RIGHT_PAR {
         NodeIdent *node_ident = (NodeIdent *)$1;
 
-        if (!parser.find_and_check_identifier_of_function_reference(node_ident->ident_)) {
-            exit(1);
-        }
+        parser.find_and_check_identifier_of_function_reference(node_ident->ident_);
 
         $$ = new NodeCallFunction($1, $3);
     }

@@ -1,5 +1,6 @@
 #include "parser.h"
 #include <iostream>
+#include <sstream>
 #include <cstddef>
 #include <string>
 #include <map>
@@ -56,7 +57,9 @@ namespace tinc {
         }
     }
 
-    Parser::Parser() {
+    Parser::Parser(int *yylineno) {
+        yylineno_ = yylineno;
+        error_count_ = 0;
         global_scope_ = new Scope(NULL);
         current_scope_ = global_scope_;
     }
@@ -86,6 +89,8 @@ namespace tinc {
     }
 
     bool Parser::find_and_check_identifier_of_variable_declaration(const std::string name) {
+        std::ostringstream oss;
+
         Identifier *identifier = this->find_identifier(name);
 
         if (identifier == NULL) {
@@ -95,7 +100,10 @@ namespace tinc {
         switch (identifier->type_) {
             case Identifier::VARIABLE:
                 if (current_scope_->level_ == identifier->scope_->level_) {
-                    std::cerr << "Redeclaration of '" << name << "'" << std::endl;
+                    oss << "Redeclaration of '" << name << "'";
+                    print_error(oss.str());
+                    error_count_++;
+
                     return false;
                 }
 
@@ -103,7 +111,10 @@ namespace tinc {
             case Identifier::FUNCTION:
             case Identifier::UNDEFINED_FUNCTION:
                 if (current_scope_->level_ == identifier->scope_->level_) {
-                    std::cerr << "'" << name << "'" << "redeclared as different kind of symbol" << std::endl;
+                    oss << "'" << name << "'" << "redeclared as different kind of symbol";
+                    print_error(oss.str());
+                    error_count_++;
+
                     return false;
                 }
                 break;
@@ -115,6 +126,8 @@ namespace tinc {
     }
 
     bool Parser::find_and_check_identifier_of_function_declaration(const std::string name) {
+        std::ostringstream oss;
+
         Identifier *identifier = this->find_identifier(name);
 
         if (identifier == NULL) {
@@ -123,10 +136,16 @@ namespace tinc {
 
         switch (identifier->type_) {
             case Identifier::VARIABLE:
-                std::cerr << "'" << name << "'" << "redeclared as different kind of symbol" << std::endl;
+                oss << "'" << name << "'" << "redeclared as different kind of symbol";
+                print_error(oss.str());
+                error_count_++;
+
                 return false;
             case Identifier::FUNCTION:
-                std::cerr << "Redeclaration of '" << name << "'" << std::endl;
+                oss << "Redeclaration of '" << name << "'";
+                print_error(oss.str());
+                error_count_++;
+
                 return false;
         }
 
@@ -134,19 +153,30 @@ namespace tinc {
     }
 
     bool Parser::find_and_check_identifier_of_variable_reference(const std::string name) {
+        std::ostringstream oss;
+
         Identifier *identifier = this->find_identifier(name);
 
         if (identifier == NULL) {
-            std::cerr << "'" << name << "' undeclared variable" << std::endl;
+            oss << "'" << name << "' undeclared variable";
+            print_error(oss.str());
+            error_count_++;
+
             return false;
         }
 
         switch (identifier->type_) {
             case Identifier::FUNCTION:
-                std::cerr << "Redeclaration of '" << name << "'" << std::endl;
+                oss << "Redeclaration of '" << name << "'";
+                print_error(oss.str());
+                error_count_++;
+
                 return false;
             case Identifier::UNDEFINED_FUNCTION:
-                std::cerr << "function '" << name << "' is used as variable" << std::endl;
+                oss << "function '" << name << "' is used as variable";
+                print_error(oss.str());
+                error_count_++;
+
                 return false;
         }
 
@@ -154,20 +184,36 @@ namespace tinc {
     }
 
     bool Parser::find_and_check_identifier_of_function_reference(const std::string name) {
+        std::ostringstream oss;
+
         Identifier *identifier = this->find_identifier(name);
 
         if (identifier == NULL) {
-            std::cerr << "'" << name << "' undeclared function" << std::endl;
+            oss << "'" << name << "' undeclared function";
+            print_error(oss.str());
+            error_count_++;
+
             return false;
         }
 
         switch (identifier->type_) {
             case Identifier::VARIABLE:
             case Identifier::PARAMETER:
-                std::cerr << "variable '" << name << "' is used as function" << std::endl;
+                oss << "variable '" << name << "' is used as function";
+                print_error(oss.str());
+                error_count_++;
+
                 return false;
         }
 
         return true;
+    }
+
+    void Parser::print_error(const std::string message) {
+        std::cerr << *yylineno_ << ": " << "error" << ": " << message << std::endl;
+    }
+
+    bool Parser::is_no_error() {
+        return (error_count_ == 0) ? true : false;
     }
 }

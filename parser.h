@@ -41,12 +41,16 @@ namespace tinc {
     };
 
     class Parser {
+        void print_error(const std::string message);
     public:
-        explicit Parser();
+        Parser(int *yylineno);
         ~Parser();
 
         Scope *global_scope_;
         Scope *current_scope_;
+
+        int *yylineno_;
+        int error_count_;
 
         void push_scope();
         void pop_scope();
@@ -57,6 +61,8 @@ namespace tinc {
         bool find_and_check_identifier_of_function_declaration(const std::string name);
         bool find_and_check_identifier_of_variable_reference(const std::string name);
         bool find_and_check_identifier_of_function_reference(const std::string name);
+
+        bool is_no_error();
     };
 }
 

@@ -10,5 +10,5 @@ int foo (int a, int x) {
 }
 
 int main (int a, int b) {
-    foo(a, 1);
+    foo(a, c, 1);
 }
